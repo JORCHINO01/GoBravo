@@ -8,10 +8,7 @@ def init_favorites():
  #Agrega una ciudad a favoritos si no está ya incluida.
  #Devuelve True si se agregó, False si ya existía.
 def add_favorite(city: dict):
-
-
     favorites = st.session_state["favorites"]
-    # Checamos si ya existe por nombre y coordenadas (único)
     if any(fav["name"] == city["name"] and 
            fav["latitude"] == city["latitude"] and 
            fav["longitude"] == city["longitude"] for fav in favorites):
