@@ -1,5 +1,5 @@
 import streamlit as st
-from src.weather_service import search_city, get_weather, get_hourly_forecast
+from src.weather_service import search_city, get_weather, get_hourly_forecast, get_daily_forecast
 from src.favorites import init_favorites, add_favorite, get_favorites, remove_favorite
 from datetime import datetime
 import locale
@@ -42,7 +42,6 @@ def main():
             st.sidebar.write(f"**{fav['name']}, {fav.get('state','')}, {fav.get('country','')}**")
             col1, col2 = st.sidebar.columns([2,1])
             
-            # Botón para mostrar clima (guarda la ciudad seleccionada en session_state)
             key_weather = f"weather_{fav['name']}_{fav['latitude']}_{fav['longitude']}"
             if col1.button("Mostrar clima", key=key_weather):
                 st.session_state["selected_city"] = fav
@@ -57,8 +56,9 @@ def main():
                 st.rerun()
     else:
         st.sidebar.info("Aún no tienes favoritos.")
-    query = None
+    
     # Barra de búsqueda
+    query = None
     if st.session_state.get("selected_city") is None:
         query = st.text_input("Busca una ciudad y agrégala a tus favoritos:")
 
@@ -101,14 +101,13 @@ def main():
             st.write(f"**Temperatura actual:** {weather['current']} °C")
             st.write(f"**Mínima:** {weather['min']} °C")
             st.write(f"**Máxima:** {weather['max']} °C")
-            df = get_hourly_forecast(selected_city["latitude"], selected_city["longitude"])
-            if df is not None and not df.empty:
-                print(df["Hora"])
-                df["Hora"] = pd.to_datetime(df["Hora"])
-                df["Fecha"] = df["Hora"].dt.strftime("%A %d de %B").str.capitalize()
-                df["Hora_str"] = df["Hora"].dt.strftime("%I:%M %p")
+            df_hourly = get_hourly_forecast(selected_city["latitude"], selected_city["longitude"])
+            if df_hourly is not None and not df_hourly.empty:
+                df_hourly["Hora"] = pd.to_datetime(df_hourly["Hora"])
+                df_hourly["Fecha"] = df_hourly["Hora"].dt.strftime("%A %d de %B").str.capitalize()
+                df_hourly["Hora_str"] = df_hourly["Hora"].dt.strftime("%I:%M %p")
 
-                chart = alt.Chart(df).mark_line(point={'size': 60}).encode(
+                chart = alt.Chart(df_hourly).mark_line(point={'size': 60}).encode(
                     x=alt.X("Hora:T", title="Hora"),
                     y=alt.Y("Temperatura:Q", title="Temperatura (°C)"),
                     tooltip=[alt.Tooltip("Fecha:N", title="Fecha"),
@@ -116,6 +115,25 @@ def main():
                             alt.Tooltip("Temperatura:Q", title="Temperatura (°C)")]
                 ).properties(title="Pronóstico para las próximas 24 horas")
                 st.altair_chart(chart, use_container_width=True)
+            
+            df_daily = get_daily_forecast(selected_city["latitude"], selected_city["longitude"])
+            if df_daily is not None and not df_daily.empty:
+                print(df_daily)
+                min_chart  = alt.Chart(df_daily).mark_line(color="blue",point=True).encode(
+                    x=alt.X("Fecha:T", title="Día"),
+                    y=alt.Y("Temp_min:Q", title="Temperatura (°C)"),
+                    tooltip=[alt.Tooltip("Dia:N", title="Día"),
+                            alt.Tooltip("Temp_min:N", title="Temp mínima (°C)")]
+                )
+                max_chart  = alt.Chart(df_daily).mark_line(color="red" ,point=True).encode(
+                    x=alt.X("Fecha:T", title="Día"),
+                    y=alt.Y("Temp_max:Q", title="Temperatura (°C)"),
+                    tooltip=[alt.Tooltip("Dia:N", title="Día"),
+                            alt.Tooltip("Temp_min:N", title="Temp máxima (°C)")]
+                )
+
+                chart_daily = (min_chart + max_chart).properties(title="Pronóstico de mínimo y máximo para los siguientes 7 días")
+                st.altair_chart(chart_daily, use_container_width=True)
         else:
             st.warning("No se pudo obtener el clima.")
         if st.button("🔄 Realizar nueva búsqueda"):

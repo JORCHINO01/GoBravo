@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
+import locale
 
 #URL de API en open-meteo; No se requiere API KEY
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -52,7 +53,7 @@ def get_weather(latitude: float, longitude: float):
     except requests.RequestException:
         return None
 
-
+# Forecast de la temperatura para las siguientes  24 horas
 def get_hourly_forecast(latitude: float, longitude: float):
     now = datetime.now()
     print(now)
@@ -79,5 +80,30 @@ def get_hourly_forecast(latitude: float, longitude: float):
         df = df.head(24)
         return df
     
+    except requests.RequestException:
+        return None
+    
+# Forecast de minimo y maximo para los siguientes 7 dias
+def get_daily_forecast(latitude: float, longitude: float):
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": "temperature_2m_max,temperature_2m_min",
+        "timezone": "auto"
+    }
+    try:
+        response = requests.get(WEATHER_URL, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        df = pd.DataFrame({
+            "Fecha": pd.to_datetime(data["daily"]["time"]),
+            "Temp_min": data["daily"]["temperature_2m_min"],
+            "Temp_max": data["daily"]["temperature_2m_max"]
+        })
+        df["Dia"] = df["Fecha"].dt.strftime("%A %d de %B").str.capitalize()
+        df["Temp_avg"] = (df["Temp_min"] + df["Temp_max"]) / 2
+
+        return df
+
     except requests.RequestException:
         return None
