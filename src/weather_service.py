@@ -1,20 +1,22 @@
 import requests
 
+#URL de API en open-meteo; No se requiere API KEY
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
+# Búsqueda de ciudades por nombre. 
+# opem-meteo permite una búsqueda aproximada; no es indispensable escribir exactamente la ciudad, o completamente
 def search_city(city_name: str, count: int = 5):
-    """Busca ciudades por nombre usando Open-Meteo."""
     params = {"name": city_name, "count": count, "language": "en", "format": "json"}
     try:
         response = requests.get(GEOCODE_URL, params=params)
-        response.raise_for_status
+        response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException:
         return []
 
+#Obtiene el clima actual y pronóstico para una ciudad.
 def get_weather(latitude: float, longitude: float):
-    """Obtiene el clima actual y pronóstico para una ciudad."""
     params = {
         "latitude": latitude,
         "longitude": longitude,
@@ -23,7 +25,9 @@ def get_weather(latitude: float, longitude: float):
         "daily": "temperature_2m_max,temperature_2m_min",
         "timezone": "auto"
     }
-    response = requests.get(WEATHER_URL, params=params)
-    if response.status_code == 200:
+    try:
+        response = requests.get(WEATHER_URL, params=params)
+        response.raise_for_status()
         return response.json()
-    return None
+    except requests.RequestException:
+        return None
