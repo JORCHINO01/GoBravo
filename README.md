@@ -1,2 +1,2 @@
 # GoBravo
-Repositorio para prueba técnica
+Prueba técnica: Pronóstico del tiempo
