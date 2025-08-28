@@ -11,7 +11,17 @@ def search_city(city_name: str, count: int = 5):
     try:
         response = requests.get(GEOCODE_URL, params=params)
         response.raise_for_status()
-        return response.json().get("results", [])
+        data = response.json()
+        results = []
+        for item in data.get("results", []):
+            results.append({
+                "name": item.get("name"),
+                "state": item.get("admin1"),     
+                "country": item.get("country"),
+                "latitude": item.get("latitude"),
+                "longitude": item.get("longitude")
+            })
+        return results
     except requests.RequestException:
         return []
 
@@ -28,6 +38,14 @@ def get_weather(latitude: float, longitude: float):
     try:
         response = requests.get(WEATHER_URL, params=params)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        current_temp = data["current_weather"]["temperature"]
+        today_max = data["daily"]["temperature_2m_max"][0]
+        today_min = data["daily"]["temperature_2m_min"][0]
+        return {
+            "current": current_temp,
+            "min": today_min,
+            "max": today_max
+        }
     except requests.RequestException:
         return None
