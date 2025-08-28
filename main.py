@@ -1,8 +1,11 @@
 import streamlit as st
-from src.weather_service import search_city, get_weather
+from src.weather_service import search_city, get_weather, get_hourly_forecast
 from src.favorites import init_favorites, add_favorite, get_favorites, remove_favorite
 from datetime import datetime
 import locale
+import altair as alt
+import pandas as pd
+
 
 try:
     locale.setlocale(locale.LC_TIME, "es_MX.UTF-8")  # Linux/macOS
@@ -98,6 +101,21 @@ def main():
             st.write(f"**Temperatura actual:** {weather['current']} °C")
             st.write(f"**Mínima:** {weather['min']} °C")
             st.write(f"**Máxima:** {weather['max']} °C")
+            df = get_hourly_forecast(selected_city["latitude"], selected_city["longitude"])
+            if df is not None and not df.empty:
+                print(df["Hora"])
+                df["Hora"] = pd.to_datetime(df["Hora"])
+                df["Fecha"] = df["Hora"].dt.strftime("%A %d de %B").str.capitalize()
+                df["Hora_str"] = df["Hora"].dt.strftime("%I:%M %p")
+
+                chart = alt.Chart(df).mark_line(point={'size': 60}).encode(
+                    x=alt.X("Hora:T", title="Hora"),
+                    y=alt.Y("Temperatura:Q", title="Temperatura (°C)"),
+                    tooltip=[alt.Tooltip("Fecha:N", title="Fecha"),
+                             alt.Tooltip("Hora_str:N", title="Hora"), 
+                            alt.Tooltip("Temperatura:Q", title="Temperatura (°C)")]
+                ).properties(title="Pronóstico para las próximas 24 horas")
+                st.altair_chart(chart, use_container_width=True)
         else:
             st.warning("No se pudo obtener el clima.")
         if st.button("🔄 Realizar nueva búsqueda"):

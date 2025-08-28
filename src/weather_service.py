@@ -1,4 +1,6 @@
 import requests
+from datetime import datetime, timedelta
+import pandas as pd
 
 #URL de API en open-meteo; No se requiere API KEY
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -47,5 +49,35 @@ def get_weather(latitude: float, longitude: float):
             "min": today_min,
             "max": today_max
         }
+    except requests.RequestException:
+        return None
+
+
+def get_hourly_forecast(latitude: float, longitude: float):
+    now = datetime.now()
+    print(now)
+    end = now + timedelta(hours=48) # Solicitamos 8 horas para considerar bien las proximas 24 horas (Open-Meteo devuelve desde las 12 am)
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": "temperature_2m",
+        "start": now.strftime("%Y-%m-%dT%H:%M"),
+        "end": end.strftime("%Y-%m-%dT%H:%M"),
+        "timezone": "auto"
+    }
+    try:
+        response = requests.get(WEATHER_URL, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        df = pd.DataFrame({
+            "Hora": pd.to_datetime(data["hourly"]["time"]),
+            "Temperatura": data["hourly"]["temperature_2m"]
+        })
+
+        # Filtrar próximas 24 horas desde el momento actual
+        df = df[df["Hora"] >= datetime.now()]
+        df = df.head(24)
+        return df
+    
     except requests.RequestException:
         return None
